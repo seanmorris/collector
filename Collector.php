@@ -16,8 +16,8 @@ const COLLECTOR_DOWNLOAD_PATH  = '/wp-admin/?page=collector_download_package';
 const COLLECTOR_FINAL_ZIP      = '/tmp/collector-package.zip';
 
 define('COLLECTOR_PLAYGROUND_URL', ($_SERVER['SERVER_NAME'] === 'localhost')
-? 'http://localhost:5400/website-server/'
-: 'https://playground.wordpress.net'
+	? 'http://localhost:5400/website-server/'
+	: 'https://playground.wordpress.net/'
 );
 
 define('COLLECTOR_WP_VERSION', $wp_version);
@@ -65,7 +65,11 @@ function collector_plugin_top_menu()
 
 function collector_render_playground_page()
 {?>
-    <iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>"></iframe>
+    <iframe
+		id = "wp-playground"
+		src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>"
+		frameBorder = "0"
+	></iframe>
     <script type = "text/javascript">
         const frame = document.getElementById('wp-playground');
         const zipUrl = '<?=COLLECTOR_DOWNLOAD_PATH;?>';
@@ -86,7 +90,7 @@ function collector_render_playground_page()
         #wpbody-content, #wpcontent { padding: 0px; }
         #wpwrap, #wpbody, #wpbody-content {padding-bottom: 0px; height: 100%;}
         #wpbody-content { position: relative; }
-        #wp-playground { position: absolute; top: 0; left: 0; width:100%; height:100%; }
+        #wp-playground { position: absolute; top: 0; left: 0; width:100%; height:100%; z-index:999; background-color: #FFF; }
     </style>
 <?php
 }
