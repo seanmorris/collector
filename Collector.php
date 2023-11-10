@@ -65,11 +65,7 @@ function collector_plugin_top_menu()
 
 function collector_render_playground_page()
 {?>
-    <iframe
-		id = "wp-playground"
-		src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>"
-		frameBorder = "0"
-	></iframe>
+    <iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>" frameBorder = "0"></iframe>
     <script type = "text/javascript">
         const frame = document.getElementById('wp-playground');
         const zipUrl = '<?=COLLECTOR_DOWNLOAD_PATH;?>';
