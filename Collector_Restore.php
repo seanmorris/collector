@@ -1,8 +1,6 @@
 <?php
 function collector_restore_backup()
 {
-    var_dump(file_exists('/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb'));
-
     if(!file_exists('/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb'))
     {
         return;

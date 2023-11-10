@@ -16,9 +16,11 @@ const COLLECTOR_DOWNLOAD_PATH  = '/wp-admin/?page=collector_download_package';
 const COLLECTOR_FINAL_ZIP      = '/tmp/collector-package.zip';
 
 define('COLLECTOR_PLAYGROUND_URL', ($_SERVER['SERVER_NAME'] === 'localhost')
-    ? 'http://localhost:5400/website-server/'
-    : 'https://playground.wordpress.net'
+? 'http://localhost:5400/website-server/'
+: 'https://playground.wordpress.net'
 );
+
+define('COLLECTOR_WP_VERSION', $wp_version);
 
 require __DIR__ . '/Collector_Content.php';
 require __DIR__ . '/Collector_Db.php';
@@ -55,15 +57,15 @@ function collector_plugin_top_menu()
         'Collector',
         'Collector',
         'manage_options',
-        'collector_render_plugin_page',
-        'collector_render_plugin_page',
+        'collector_render_playground_page',
+        'collector_render_playground_page',
         NULL
     );
 }
 
-function collector_render_plugin_page()
+function collector_render_playground_page()
 {?>
-    <iframe id = "wp-playground" style = "width:100%;height:100%;" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/"></iframe>
+    <iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>"></iframe>
     <script type = "text/javascript">
         const frame = document.getElementById('wp-playground');
         const zipUrl = '<?=COLLECTOR_DOWNLOAD_PATH;?>';
@@ -72,8 +74,10 @@ function collector_render_plugin_page()
         frame.addEventListener('load', event => {
             fetch(zipUrl)
             .then(r=>r.arrayBuffer())
-            .then(zip=>frame.contentWindow.postMessage(
-                {zip, pluginUrl, pluginName, type:'collector-zip-package'}, new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin, [zip]
+            .then(zipPackage => frame.contentWindow.postMessage(
+                {zipPackage, pluginUrl, pluginName, type:'collector-zip-package'},
+                new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
+                [zipPackage]
             ));
         });
     </script>
@@ -81,6 +85,8 @@ function collector_render_plugin_page()
     <style type = "text/css">
         #wpbody-content, #wpcontent { padding: 0px; }
         #wpwrap, #wpbody, #wpbody-content {padding-bottom: 0px; height: 100%;}
+        #wpbody-content { position: relative; }
+        #wp-playground { position: absolute; top: 0; left: 0; width:100%; height:100%; }
     </style>
 <?php
 }
@@ -90,7 +96,7 @@ function collector_plugin_install_action_links($action_links, $plugin)
     $preview_button = sprintf(
         '<a class="preview-now button" data-slug="%s" href="%s" aria-label="%s" data-name="%s">%s</a>',
         esc_attr( $plugin['slug'] ),
-        '/wp-admin/admin.php?page=collector_render_plugin_page&pluginUrl=' . esc_url( $plugin['download_link'] ) . '&pluginName=' . esc_attr( $plugin['slug'] ),
+        '/wp-admin/admin.php?page=collector_render_playground_page&pluginUrl=' . esc_url( $plugin['download_link'] ) . '&pluginName=' . esc_attr( $plugin['slug'] ),
         /* translators: %s: Plugin name and version. */
         esc_attr( sprintf( _x( 'Install %s now', 'plugin' ), $plugin['name'] ) ),
         esc_attr( $plugin['name'] ),
