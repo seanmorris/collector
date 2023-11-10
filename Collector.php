@@ -23,10 +23,13 @@ define('COLLECTOR_PLAYGROUND_URL', ($_SERVER['SERVER_NAME'] === 'localhost')
 require __DIR__ . '/Collector_Content.php';
 require __DIR__ . '/Collector_Db.php';
 require __DIR__ . '/Collector_Helpers.php';
+require __DIR__ . '/Collector_Restore.php';
 require __DIR__ . '/Collector_Zip.php';
 
 add_action('admin_menu', 'collector_plugin_top_menu');
 add_action('plugins_loaded', 'collector_plugins_loaded');
+add_filter('plugin_install_action_links', 'collector_plugin_install_action_links', 10, 2);
+
 register_activation_hook(__FILE__, 'collector_restore_backup');
 
 function collector_plugins_loaded()
@@ -82,66 +85,19 @@ function collector_render_plugin_page()
 <?php
 }
 
-function collector_restore_backup()
+function collector_plugin_install_action_links($action_links, $plugin)
 {
-    var_dump(file_exists('/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb'));
+    $preview_button = sprintf(
+        '<a class="preview-now button" data-slug="%s" href="%s" aria-label="%s" data-name="%s">%s</a>',
+        esc_attr( $plugin['slug'] ),
+        '/wp-admin/admin.php?page=collector_render_plugin_page&pluginUrl=' . esc_url( $plugin['download_link'] ) . '&pluginName=' . esc_attr( $plugin['slug'] ),
+        /* translators: %s: Plugin name and version. */
+        esc_attr( sprintf( _x( 'Install %s now', 'plugin' ), $plugin['name'] ) ),
+        esc_attr( $plugin['name'] ),
+        __( 'Preview Now' )
+    );
 
-    if(!file_exists('/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb'))
-    {
-        return;
-    }
+    array_unshift($action_links, $preview_button);
 
-    if(!file_exists('/wordpress/schema'))
-    {
-        return;
-    }
-
-    $files = scandir('/wordpress/schema');
-
-    $schemaFile  = null;
-    $recordFiles = [];
-
-    foreach($files as $file)
-    {
-        if($file === '.' || $file === '..')
-        {
-            continue;
-        }
-
-        if(substr($file, -4) === '.sql')
-        {
-            $schemaFile = '/wordpress/schema/' . $file;
-        }
-
-        if(substr($file, -5) === '.json')
-        {
-            $recordFiles[] = '/wordpress/schema/' . $file;
-        }
-    }
-
-    global $wpdb;
-    $queries = explode("\n", file_get_contents($schemaFile));
-
-    foreach($queries as $query)
-    {
-        $wpdb->query($query);
-    }
-
-    foreach($recordFiles as $recordFile)
-    {
-        $table = substr(basename($recordFile), 0, -5);
-        $records = json_decode(file_get_contents($recordFile), JSON_OBJECT_AS_ARRAY);
-
-        foreach($records as $record)
-        {
-            $wpdb->query(sprintf(
-                'INSERT INTO `%s` (%s) VALUES (%s)',
-                $table,
-                implode(', ', array_map(fn($f) => "`$f`", array_keys($record))),
-                implode(', ', array_map(fn($f) => "'$f'", array_values($record))),
-            ));
-        }
-    }
-
-    rmdir('/wordpress/schema');
+    return $action_links;
 }
