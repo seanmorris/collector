@@ -43,5 +43,5 @@ function collector_zip_send()
 
 function collector_zip_delete()
 {
-    unlink(COLLECTOR_FINAL_ZIP);
+    // unlink(COLLECTOR_FINAL_ZIP);
 }

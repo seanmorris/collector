@@ -27,7 +27,7 @@ function collector_restore_backup()
             $schemaFile = '/wordpress/schema/' . $file;
         }
 
-        if(substr($file, -5) === '.json')
+        if(substr($file, -6) === '.jsonl')
         {
             $recordFiles[] = '/wordpress/schema/' . $file;
         }
@@ -43,7 +43,7 @@ function collector_restore_backup()
 
     foreach($recordFiles as $recordFile)
     {
-        $table = substr(basename($recordFile), 0, -5);
+        $table = substr(basename($recordFile), 0, -6);
         $handle = fopen($recordFile, 'r');
         $buffer = '';
 
@@ -67,7 +67,7 @@ function collector_restore_backup()
             ));
         }
 
-        fclose($recordFile);
+        fclose($handle);
         unlink($recordFile);
     }
 

@@ -2,7 +2,7 @@
 function collector_dump_db($zip)
 {
     $tables   = collector_get_db_tables();
-    $sqlFile  = collector_get_tmpfile('schema', 'sql');    
+    $sqlFile  = collector_get_tmpfile('schema', 'sql');
     $tmpFiles = [$sqlFile];
 
     foreach($tables as $table)
@@ -10,7 +10,7 @@ function collector_dump_db($zip)
         file_put_contents($sqlFile, sprintf("DROP TABLE IF EXISTS `%s`;\n", $table), FILE_APPEND);
         file_put_contents($sqlFile, preg_replace("/\s+/", " ", collector_dump_db_schema($table)) . "\n", FILE_APPEND);
     }
-    
+
     $zip->addFile($sqlFile, 'schema/_Schema.sql');
 
     // Process in reverse order so wp_users comes before wp_options
@@ -21,17 +21,14 @@ function collector_dump_db($zip)
         $recordFile = collector_get_tmpfile($table, 'jsonl');
         $recordList = collector_dump_db_records($table);
 
-        while($record = $recordList->fetchAssoc())
+        while($record = $recordList->fetch_assoc())
         {
-            if($table === 'wp_users')
+            if($table === 'wp_users' && (int) $record['ID'] === (int) wp_get_current_user()->ID)
             {
-                if((int) $record['ID'] === (int) wp_get_current_user()->ID)
-                {
-                    $record['user_pass'] = wp_hash_password(collector_use_fakepass());
-                }
+                $record['user_pass'] = wp_hash_password(collector_use_fakepass());
             }
 
-            file_put_contents($recordFile, json_encode($recordList) . "\n", FILE_APPEND);
+            file_put_contents($recordFile, json_encode($record) . "\n", FILE_APPEND);
         }
 
         $zip->addFile($recordFile, 'schema/' . $table . '.jsonl');
