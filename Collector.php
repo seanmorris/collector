@@ -5,11 +5,11 @@
  */
 /*
 Plugin Name: Collector
-Plugin URI:
+Plugin URI: https://github.com/seanmorris/collector
 Description: Packages your WordPress install and sends it to Playground.
 Author: Sean Morris
 Version: 0.0.0
-Author URI:
+Author URI: https://github.com/seanmorris/
 */
 
 const COLLECTOR_DOWNLOAD_PATH  = '/wp-admin/?page=collector_download_package';
