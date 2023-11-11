@@ -69,10 +69,10 @@ function collector_render_playground_page()
 {?>
 	<iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>&php=<?=COLLECTOR_PHP_VERSION;?>"></iframe>
 	<iframe id = "wp-playground-loader" srcdoc = "<?=htmlentities(collector_get_preloader('Initializing Environment'));?>"></iframe>
-    <script type = "text/javascript">
-        const loader = document.getElementById('wp-playground-loader');
-        const frame  = document.getElementById('wp-playground');
-        const zipUrl = <?=json_encode(COLLECTOR_DOWNLOAD_PATH);?>;
+	<script type = "text/javascript">
+		const loader = document.getElementById('wp-playground-loader');
+		const frame  = document.getElementById('wp-playground');
+		const zipUrl = <?=json_encode(COLLECTOR_DOWNLOAD_PATH);?>;
 
 		const username = <?=json_encode(wp_get_current_user()->user_login);?>;
 		const fakepass = <?=json_encode(collector_get_fakepass());?>;
