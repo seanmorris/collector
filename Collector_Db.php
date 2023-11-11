@@ -18,6 +18,17 @@ function collector_dump_db($zip)
         $recordFile = collector_get_tmpfile($table, 'json');
         $recordList = collector_dump_db_records($table);
 
+        if($table === 'wp_users')
+        {
+            foreach($recordList as &$record)
+            {
+                if((int) $record['ID'] === (int) wp_get_current_user()->ID)
+                {
+                    $record['user_pass'] = wp_hash_password(collector_use_fakepass());
+                }
+            }
+        }
+
         file_put_contents($recordFile, json_encode($recordList, JSON_PRETTY_PRINT));
         $zip->addFile($recordFile, 'schema/' . $table . '.json');
 

@@ -71,8 +71,10 @@ function collector_render_playground_page()
     <script type = "text/javascript">
         const loader = document.getElementById('wp-playground-loader');
         const frame  = document.getElementById('wp-playground');
-        const zipUrl = '<?=COLLECTOR_DOWNLOAD_PATH;?>';
+        const zipUrl = <?=json_encode(COLLECTOR_DOWNLOAD_PATH);?>;
 
+		const username = <?=json_encode(wp_get_current_user()->user_login);?>;
+		const fakepass = <?=json_encode(collector_get_fakepass());?>;
 		const pluginUrl = new URLSearchParams(window.location.search).get('pluginUrl');
         const pluginName = new URLSearchParams(window.location.search).get('pluginName');
 		const fetchZip = fetch(zipUrl);
@@ -80,18 +82,18 @@ function collector_render_playground_page()
 		const fetchPreload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Loading Resources'));?>');
 		const fetchPostload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Activating Plugin'));?>');
 
-		frame.addEventListener('load', event => {
+		window.addEventListener('message', event => {
 			Promise.all([fetchZip, fetchPlugin, fetchPreload, fetchPostload])
 			.then(r => Promise.all(r.map(rr => rr.arrayBuffer())))
 			.then(([zipPackage, plugin, preloader, postloader]) => {
 				frame.contentWindow.postMessage(
-					{zipPackage, plugin, preloader, postloader, pluginName, type:'collector-zip-package'},
+					{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
 					new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
 					[zipPackage, plugin, preloader, postloader]
 				);
 				loader.remove();
-			});
-		});
+			}, {once: true});
+		}, {once: true});
     </script>
     <a href = "<?=COLLECTOR_DOWNLOAD_PATH;?>">Download Zip</a>
     <style type = "text/css">

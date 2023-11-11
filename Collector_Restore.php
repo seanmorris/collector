@@ -42,8 +42,6 @@ function collector_restore_backup()
         $wpdb->query($query);
     }
 
-    $maxUserId = 1;
-
     foreach($recordFiles as $recordFile)
     {
         $table = substr(basename($recordFile), 0, -5);
@@ -57,11 +55,6 @@ function collector_restore_backup()
                 implode(', ', array_map(fn($f) => "`$f`", array_keys($record))),
                 implode(', ', array_map(fn($f) => "'$f'", array_values($record))),
             ));
-
-            if($table === 'wp_users')
-            {
-                $maxUserId = max($maxUserId, $record->ID);
-            }
         }
     }
 
