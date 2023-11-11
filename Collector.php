@@ -91,7 +91,6 @@ function collector_render_playground_page()
 			const plugin     = await (await fetchPlugin).arrayBuffer();
 
 			frame.addEventListener('load', () => {
-				console.log('LOADED');
 				frame.contentWindow.postMessage(
 					{type :'collector-init', preloader},
 					new URL(<?=json_encode(COLLECTOR_PLAYGROUND_URL)?>).origin,
@@ -104,7 +103,6 @@ function collector_render_playground_page()
 				{
 					return;
 				}
-				console.log('LISTENING');
 				window.removeEventListener('message', onListen);
 				frame.contentWindow.postMessage(
 					{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
