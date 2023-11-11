@@ -80,32 +80,39 @@ function collector_render_playground_page()
         const pluginName = new URLSearchParams(window.location.search).get('pluginName');
 		const fetchZip = fetch(zipUrl);
 		const fetchPlugin = fetch(pluginUrl);
-		const fetchPreload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Loading Resources'));?>');
+
+		const fetchPreload  = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Loading Resources'));?>');
 		const fetchPostload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Activating Plugin'));?>');
 
-		frame.addEventListener('load', () => {
-			frame.contentWindow.postMessage(
-				{type :'collector-init'},
-				new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
-			);
-		});
+		(async () => {
+			const preloader = await (await fetchPreload).arrayBuffer();
+			const postloader = await (await fetchPostload).arrayBuffer();
 
-		window.addEventListener('message', event => {
-			if(event?.data?.type !== 'preview-service-listening')
-			{
-				return;
-			}
-			Promise.all([fetchZip, fetchPlugin, fetchPreload, fetchPostload])
-			.then(r => Promise.all(r.map(rr => rr.arrayBuffer())))
-			.then(([zipPackage, plugin, preloader, postloader]) => {
+			frame.addEventListener('load', () => {
 				frame.contentWindow.postMessage(
-					{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
+					{type :'collector-init', preloader},
 					new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
-					[zipPackage, plugin, preloader, postloader]
+					[structuredClone(preloader)],
 				);
-				loader.remove();
 			}, {once: true});
-		}, {once: true});
+
+			window.addEventListener('message', event => {
+				if(event?.data?.type !== 'preview-service-listening')
+				{
+					return;
+				}
+				Promise.all([fetchZip, fetchPlugin])
+				.then(r => Promise.all(r.map(rr => rr.arrayBuffer())))
+				.then(([zipPackage, plugin]) => {
+					frame.contentWindow.postMessage(
+						{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
+						new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
+						[zipPackage, plugin, preloader, postloader]
+					);
+					loader.remove();
+				}, {once: true});
+			}, {once: true});
+		})();
     </script>
     <a href = "<?=COLLECTOR_DOWNLOAD_PATH;?>">Download Zip</a>
     <style type = "text/css">
