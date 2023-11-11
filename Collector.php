@@ -67,51 +67,58 @@ function collector_plugin_top_menu()
 
 function collector_render_playground_page()
 {?>
-	<iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>&php=<?=COLLECTOR_PHP_VERSION;?>"></iframe>
+	<iframe id = "wp-playground"></iframe>
 	<iframe id = "wp-playground-loader" srcdoc = "<?=htmlentities(collector_get_preloader('Initializing Environment'));?>"></iframe>
 	<script type = "text/javascript">
 		const loader = document.getElementById('wp-playground-loader');
 		const frame  = document.getElementById('wp-playground');
 		const zipUrl = <?=json_encode(COLLECTOR_DOWNLOAD_PATH);?>;
 
-		const username = <?=json_encode(wp_get_current_user()->user_login);?>;
-		const fakepass = <?=json_encode(collector_get_fakepass());?>;
-		const pluginUrl = new URLSearchParams(window.location.search).get('pluginUrl');
+		const username   = <?=json_encode(wp_get_current_user()->user_login);?>;
+		const fakepass   = <?=json_encode(collector_get_fakepass());?>;
+		const pluginUrl  = new URLSearchParams(window.location.search).get('pluginUrl');
         const pluginName = new URLSearchParams(window.location.search).get('pluginName');
-		const fetchZip = fetch(zipUrl);
-		const fetchPlugin = fetch(pluginUrl);
 
+		const fetchZip      = fetch(zipUrl);
+		const fetchPlugin   = fetch(pluginUrl);
 		const fetchPreload  = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Loading Resources'));?>');
 		const fetchPostload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Activating Plugin'));?>');
 
 		(async () => {
-			const preloader = await (await fetchPreload).arrayBuffer();
+			const preloader  = await (await fetchPreload).arrayBuffer();
 			const postloader = await (await fetchPostload).arrayBuffer();
+			const zipPackage = await (await fetchZip).arrayBuffer();
+			const plugin     = await (await fetchPlugin).arrayBuffer();
 
 			frame.addEventListener('load', () => {
+				console.log('LOADED');
 				frame.contentWindow.postMessage(
 					{type :'collector-init', preloader},
-					new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
+					new URL(<?=json_encode(COLLECTOR_PLAYGROUND_URL)?>).origin,
 					[structuredClone(preloader)],
 				);
-			}, {once: true});
+			});
 
-			window.addEventListener('message', event => {
+			const onListen = event => {
 				if(event?.data?.type !== 'preview-service-listening')
 				{
 					return;
 				}
-				Promise.all([fetchZip, fetchPlugin])
-				.then(r => Promise.all(r.map(rr => rr.arrayBuffer())))
-				.then(([zipPackage, plugin]) => {
-					frame.contentWindow.postMessage(
-						{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
-						new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
-						[zipPackage, plugin, preloader, postloader]
-					);
-					loader.remove();
-				}, {once: true});
-			}, {once: true});
+				console.log('LISTENING');
+				window.removeEventListener('message', onListen);
+				frame.contentWindow.postMessage(
+					{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
+					new URL(<?=json_encode(COLLECTOR_PLAYGROUND_URL)?>).origin,
+					[zipPackage, plugin, preloader, postloader]
+				);
+				loader.remove();
+			};
+
+			window.addEventListener('message', onListen);
+
+			const playgroundUrl = '<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>&php=<?=COLLECTOR_PHP_VERSION;?>';
+
+			frame.setAttribute('src', playgroundUrl);
 		})();
     </script>
     <a href = "<?=COLLECTOR_DOWNLOAD_PATH;?>">Download Zip</a>
