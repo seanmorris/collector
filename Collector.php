@@ -12,8 +12,9 @@ Version: 0.0.0
 Author URI: https://github.com/seanmorris/
 */
 
-const COLLECTOR_DOWNLOAD_PATH  = '/wp-admin/?page=collector_download_package';
-const COLLECTOR_FINAL_ZIP      = '/tmp/collector-package.zip';
+const COLLECOTOR_PLAYROUND_FLAG = '/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb';
+const COLLECTOR_DOWNLOAD_PATH   = '/wp-admin/?page=collector_download_package';
+const COLLECTOR_FINAL_ZIP       = '/tmp/collector-package.zip';
 
 define('COLLECTOR_PLAYGROUND_URL', ($_SERVER['SERVER_NAME'] === 'localhost')
 	? 'http://localhost:5400/website-server/'
@@ -83,6 +84,10 @@ function collector_render_playground_page()
 		const fetchPostload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Activating Plugin'));?>');
 
 		window.addEventListener('message', event => {
+			if(event?.data?.type !== 'preview-service-listening')
+			{
+				return;
+			}
 			Promise.all([fetchZip, fetchPlugin, fetchPreload, fetchPostload])
 			.then(r => Promise.all(r.map(rr => rr.arrayBuffer())))
 			.then(([zipPackage, plugin, preloader, postloader]) => {

@@ -1,7 +1,7 @@
 <?php
 function collector_restore_backup()
 {
-    if(!file_exists('/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb'))
+    if(!file_exists(COLLECTOR_PLAYGROUND_FLAG))
     {
         return;
     }
@@ -15,7 +15,6 @@ function collector_restore_backup()
 
     $schemaFile  = null;
     $recordFiles = [];
-
     foreach($files as $file)
     {
         if($file === '.' || $file === '..')
@@ -45,10 +44,21 @@ function collector_restore_backup()
     foreach($recordFiles as $recordFile)
     {
         $table = substr(basename($recordFile), 0, -5);
-        $records = json_decode(file_get_contents($recordFile), JSON_OBJECT_AS_ARRAY);
+        $handle = fopen($recordFile, 'r');
+        $buffer = '';
 
-        foreach($records as $record)
+        while($bytes = fgets($handle))
         {
+            $buffer .= $bytes;
+            
+            if(substr($buffer, -1, 1) !== "\n")
+            {
+                continue;
+            }
+
+            $record = json_decode($buffer, JSON_OBJECT_AS_ARRAY);
+            $buffer = '';
+
             $wpdb->query(sprintf(
                 'INSERT INTO `%s` (%s) VALUES (%s)',
                 $table,
@@ -56,6 +66,9 @@ function collector_restore_backup()
                 implode(', ', array_map(fn($f) => "'$f'", array_values($record))),
             ));
         }
+
+        fclose($recordFile);
+        unlink($recordFile);
     }
 
     rmdir('/wordpress/schema');

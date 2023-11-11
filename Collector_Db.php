@@ -18,22 +18,23 @@ function collector_dump_db($zip)
     // dumped to the schema backup in the zip
     foreach(array_reverse($tables) as $table)
     {
-        $recordFile = collector_get_tmpfile($table, 'json');
+        $recordFile = collector_get_tmpfile($table, 'jsonl');
         $recordList = collector_dump_db_records($table);
 
-        if($table === 'wp_users')
+        while($record = $recordList->fetchAssoc())
         {
-            foreach($recordList as &$record)
+            if($table === 'wp_users')
             {
                 if((int) $record['ID'] === (int) wp_get_current_user()->ID)
                 {
                     $record['user_pass'] = wp_hash_password(collector_use_fakepass());
                 }
             }
+
+            file_put_contents($recordFile, json_encode($recordList) . "\n", FILE_APPEND);
         }
 
-        file_put_contents($recordFile, json_encode($recordList, JSON_PRETTY_PRINT));
-        $zip->addFile($recordFile, 'schema/' . $table . '.json');
+        $zip->addFile($recordFile, 'schema/' . $table . '.jsonl');
 
         $tmpFiles[] = $recordFile;
     }
@@ -75,6 +76,5 @@ function collector_dump_db_records($table)
 {
     $mysqli = collector_get_db();
     return $mysqli
-    ->query(sprintf('SELECT * FROM `%s`', $mysqli->real_escape_string($table)))
-    ->fetch_all(MYSQLI_ASSOC);
+    ->query(sprintf('SELECT * FROM `%s`', $mysqli->real_escape_string($table)));
 }
