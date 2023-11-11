@@ -7,3 +7,8 @@ function collector_get_tmpfile($name, $type)
 
     return $typName;
 }
+
+function collector_get_preloader($message)
+{
+    return sprintf(file_get_contents(__DIR__ . '/loading.html'), $message);
+}

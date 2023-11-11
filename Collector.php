@@ -6,7 +6,7 @@
 /*
 Plugin Name: Collector
 Plugin URI:
-Description:
+Description: Packages your WordPress install and sends it to Playground.
 Author: Sean Morris
 Version: 0.0.0
 Author URI:
@@ -21,6 +21,7 @@ define('COLLECTOR_PLAYGROUND_URL', ($_SERVER['SERVER_NAME'] === 'localhost')
 );
 
 define('COLLECTOR_WP_VERSION', $wp_version);
+define('COLLECTOR_PHP_VERSION', implode('.',sscanf(phpversion(), '%d.%d')));
 
 require __DIR__ . '/Collector_Content.php';
 require __DIR__ . '/Collector_Db.php';
@@ -65,28 +66,41 @@ function collector_plugin_top_menu()
 
 function collector_render_playground_page()
 {?>
-    <iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>" frameBorder = "0"></iframe>
+	<iframe id = "wp-playground" src = "<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>&php=<?=COLLECTOR_PHP_VERSION;?>"></iframe>
+	<iframe id = "wp-playground-loader" srcdoc = "<?=htmlentities(collector_get_preloader('Initializing Environment'));?>"></iframe>
     <script type = "text/javascript">
-        const frame = document.getElementById('wp-playground');
+        const loader = document.getElementById('wp-playground-loader');
+        const frame  = document.getElementById('wp-playground');
         const zipUrl = '<?=COLLECTOR_DOWNLOAD_PATH;?>';
-        const pluginUrl = new URLSearchParams(window.location.search).get('pluginUrl');
+
+		const pluginUrl = new URLSearchParams(window.location.search).get('pluginUrl');
         const pluginName = new URLSearchParams(window.location.search).get('pluginName');
-        frame.addEventListener('load', event => {
-            fetch(zipUrl)
-            .then(r=>r.arrayBuffer())
-            .then(zipPackage => frame.contentWindow.postMessage(
-                {zipPackage, pluginUrl, pluginName, type:'collector-zip-package'},
-                new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
-                [zipPackage]
-            ));
-        });
+		const fetchZip = fetch(zipUrl);
+		const fetchPlugin = fetch(pluginUrl);
+		const fetchPreload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Loading Resources'));?>');
+		const fetchPostload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Activating Plugin'));?>');
+
+		frame.addEventListener('load', event => {
+			Promise.all([fetchZip, fetchPlugin, fetchPreload, fetchPostload])
+			.then(r => Promise.all(r.map(rr => rr.arrayBuffer())))
+			.then(([zipPackage, plugin, preloader, postloader]) => {
+				frame.contentWindow.postMessage(
+					{zipPackage, plugin, preloader, postloader, pluginName, type:'collector-zip-package'},
+					new URL('<?=COLLECTOR_PLAYGROUND_URL?>').origin,
+					[zipPackage, plugin, preloader, postloader]
+				);
+				loader.remove();
+			});
+		});
     </script>
     <a href = "<?=COLLECTOR_DOWNLOAD_PATH;?>">Download Zip</a>
     <style type = "text/css">
-        #wpbody-content, #wpcontent { padding: 0px; }
+        #wpbody-content, #wpcontent { padding-left: 0px !important; }
         #wpwrap, #wpbody, #wpbody-content {padding-bottom: 0px; height: 100%;}
         #wpbody-content { position: relative; }
-        #wp-playground { position: absolute; top: 0; left: 0; width:100%; height:100%; z-index:999; background-color: #FFF; }
+        #wp-playground, #wp-playground-loader {
+			position: absolute; top: 0; left: 0; width:100%; height:100%; z-index:999; background-color: #FFF;
+		}
     </style>
 <?php
 }

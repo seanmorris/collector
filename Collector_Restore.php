@@ -34,13 +34,15 @@ function collector_restore_backup()
         }
     }
 
-    global $wpdb;
     $queries = explode("\n", file_get_contents($schemaFile));
-
+    
+    global $wpdb;
     foreach($queries as $query)
     {
         $wpdb->query($query);
     }
+
+    $maxUserId = 1;
 
     foreach($recordFiles as $recordFile)
     {
@@ -55,6 +57,11 @@ function collector_restore_backup()
                 implode(', ', array_map(fn($f) => "`$f`", array_keys($record))),
                 implode(', ', array_map(fn($f) => "'$f'", array_values($record))),
             ));
+
+            if($table === 'wp_users')
+            {
+                $maxUserId = max($maxUserId, $record->ID);
+            }
         }
     }
 
