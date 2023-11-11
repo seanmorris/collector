@@ -15,16 +15,9 @@ function collector_get_preloader($message)
 
 function collector_get_fakepass()
 {
-    $fakepass = get_transient('COLLECTOR_FAKE_PASSWORD');
+    $fakepass = random_bytes(256);
 
-    if($fakepass)
-    {
-        return $fakepass;
-    }
-
-    $fakepass = uniqid();
-
-    set_transient('COLLECTOR_FAKE_PASSWORD', $fakepass, 60 * 5000);
+    set_transient('COLLECTOR_FAKE_PASSWORD', $fakepass, 60 * 5);
 
     return $fakepass;
 }

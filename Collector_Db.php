@@ -13,7 +13,10 @@ function collector_dump_db($zip)
     
     $zip->addFile($sqlFile, 'schema/_Schema.sql');
 
-    foreach($tables as $table)
+    // Process in reverse order so wp_users comes before wp_options
+    // meaning the fakepass will be cleared before transients are
+    // dumped to the schema backup in the zip
+    foreach(array_reverse($tables) as $table)
     {
         $recordFile = collector_get_tmpfile($table, 'json');
         $recordList = collector_dump_db_records($table);
