@@ -15,7 +15,7 @@ function collector_get_preloader($message)
 
 function collector_get_fakepass()
 {
-    $fakepass = random_bytes(256);
+    $fakepass = base64_encode(random_bytes(128));
 
     set_transient('COLLECTOR_FAKE_PASSWORD', $fakepass, 60 * 5);
 
