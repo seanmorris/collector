@@ -12,7 +12,7 @@ Version: 0.0.0
 Author URI: https://github.com/seanmorris/
 */
 
-const COLLECTOR_PLAYGROUND_FLAG = '/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb';
+// const COLLECTOR_PLAYGROUND_FLAG = '/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb';
 const COLLECTOR_DOWNLOAD_PATH   = '/wp-admin/?page=collector_download_package';
 const COLLECTOR_FINAL_ZIP       = '/tmp/collector-package.zip';
 
@@ -20,6 +20,8 @@ define('COLLECTOR_PLAYGROUND_URL', ($_SERVER['SERVER_NAME'] === 'localhost')
 	? 'http://localhost:5400/website-server/'
 	: 'https://playground.wordpress.net/'
 );
+
+global $wp_version;
 
 define('COLLECTOR_WP_VERSION', $wp_version);
 define('COLLECTOR_PHP_VERSION', implode('.',sscanf(phpversion(), '%d.%d')));
@@ -29,12 +31,15 @@ require __DIR__ . '/Collector_Db.php';
 require __DIR__ . '/Collector_Helpers.php';
 require __DIR__ . '/Collector_Restore.php';
 require __DIR__ . '/Collector_Zip.php';
+// require __DIR__ . '/Collector_Github.php';
+// require __DIR__ . '/Collector_Settings.php';
 
-add_action('admin_menu', 'collector_plugin_top_menu');
+// add_action('admin_init', 'collector_settings_init');
+add_action('admin_menu', 'collector_plugin_menu');
 add_action('plugins_loaded', 'collector_plugins_loaded');
 add_filter('plugin_install_action_links', 'collector_plugin_install_action_links', 10, 2);
 
-register_activation_hook(__FILE__, 'collector_restore_backup');
+// register_activation_hook(__FILE__, 'collector_restore_backup');
 
 function collector_plugins_loaded()
 {
@@ -50,9 +55,15 @@ function collector_plugins_loaded()
         collector_zip_delete();
         exit();
     }
+
+	// if(substr(urldecode($_SERVER['REQUEST_URI']), 0, strlen(COLLECTOR_GITHUB_ACCEPT_PATH)) === COLLECTOR_GITHUB_ACCEPT_PATH)
+    // {
+	// 	collector_github_accept();
+	// 	exit();
+	// }
 }
 
-function collector_plugin_top_menu()
+function collector_plugin_menu()
 {
     add_submenu_page(
         NULL,
@@ -63,14 +74,28 @@ function collector_plugin_top_menu()
         'collector_render_playground_page',
         NULL
     );
+
+	// add_submenu_page(
+	// 	'options-general.php',
+	// 	'Collector',
+	// 	'Collector Settings',
+	// 	'manage_options',
+	// 	'collector',
+	// 	'collector_render_settings_page'
+	// );
 }
 
 function collector_render_playground_page()
 {?>
-	<iframe id = "wp-playground"></iframe>
-	<iframe id = "wp-playground-loader" srcdoc = "<?=htmlentities(collector_get_preloader('Initializing Environment'));?>"></iframe>
+	<div id = "wp-playground-wrapper">
+		<div id = "wp-playground-toolbar">
+			NOW WORKING INSIDE WORDPRESS PLAYGROUND &nbsp; [<a href = "/wp-admin" id = "goBack">RETURN</a>]
+		</div>
+		<div id = "wp-playground-main-area">
+			<iframe id = "wp-playground"></iframe>
+		</div>
+	</div>
 	<script type = "text/javascript">
-		const loader = document.getElementById('wp-playground-loader');
 		const frame  = document.getElementById('wp-playground');
 		const zipUrl = <?=json_encode(COLLECTOR_DOWNLOAD_PATH);?>;
 
@@ -79,66 +104,152 @@ function collector_render_playground_page()
 		const pluginUrl  = new URLSearchParams(window.location.search).get('pluginUrl');
         const pluginName = new URLSearchParams(window.location.search).get('pluginName');
 
-		const fetchZip      = fetch(zipUrl);
-		const fetchPlugin   = fetch(pluginUrl);
-		const fetchPreload  = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Loading Resources'));?>');
-		const fetchPostload = fetch('data:text/html;base64,<?=base64_encode(collector_get_preloader('Activating Plugin'));?>');
-
 		(async () => {
-			const preloader  = await (await fetchPreload).arrayBuffer();
-			const postloader = await (await fetchPostload).arrayBuffer();
-			const zipPackage = await (await fetchZip).arrayBuffer();
-			const plugin     = await (await fetchPlugin).arrayBuffer();
+			// const  { startPlaygroundWeb } = await import('https://unpkg.com/@wp-playground/client/index.js');
+			const  { startPlaygroundWeb } = await import('http://localhost:8081/index.js');
 
-			frame.addEventListener('load', () => {
-				frame.contentWindow.postMessage(
-					{type :'collector-init', preloader},
-					new URL(<?=json_encode(COLLECTOR_PLAYGROUND_URL)?>).origin,
-					[structuredClone(preloader)],
-				);
+			const steps = [
+				{
+					step: 'writeFile',
+					path: <?=json_encode(COLLECTOR_PLAYGROUND_FLAG);?>,
+					data: '',
+				},
+				{
+					step: 'writeFile',
+					path: '/data.zip',
+					data: {
+						'resource': 'url',
+						'url': zipUrl,
+					},
+				},
+				{
+					step: 'unzip',
+					zipPath: '/data.zip',
+					extractToPath: '/wordpress',
+				},
+				{
+					step: 'rm',
+					path: '/data.zip',
+				},
+				{
+					step: 'runSqlFile',
+					path: '/wordpress/schema/_Schema.sql',
+				},
+				{
+					step: 'rm',
+					path: '/wordpress/wp-content/mu-plugins/1-show-admin-credentials-on-wp-login.php',
+				},
+			];
+
+			if(pluginUrl && pluginName)
+			{
+				steps.push(...[
+					{
+						step: 'writeFile',
+						path: '/plugin.zip',
+						data: {
+							'resource': 'url',
+							'url': pluginUrl,
+						},
+					},
+					{
+						step: 'unzip',
+						zipPath: '/plugin.zip',
+						extractToPath: '/wordpress/wp-content/plugins',
+					},
+					{
+						step: 'rm',
+						path: '/plugin.zip',
+					},
+					{
+						step: 'activatePlugin',
+						pluginName: pluginName,
+						pluginPath: '/wordpress/wp-content/plugins/' + pluginName,
+					},
+				]);
+			}
+
+			steps.push(...[
+				{
+					step: 'login',
+					username: username,
+					password: fakepass,
+				},
+				{
+					step: 'rm',
+					path: <?=json_encode(COLLECTOR_PLAYGROUND_FLAG);?>,
+				}
+			]);
+
+			const client = await startPlaygroundWeb({
+				iframe: document.getElementById('wp-playground'),
+				remoteUrl: `https://playground.wordpress.net/remote.html`,
+				blueprint: {
+					preferredVersions: {
+						wp: <?=json_encode(COLLECTOR_WP_VERSION);?>,
+						php: <?=json_encode(COLLECTOR_PHP_VERSION);?>,
+					},
+					phpExtensionBundles: ['kitchen-sink'],
+					steps,
+				},
 			});
 
-			const onListen = event => {
-				if(event?.data?.type !== 'preview-service-listening')
-				{
-					return;
-				}
-				window.removeEventListener('message', onListen);
-				frame.contentWindow.postMessage(
-					{zipPackage, plugin, preloader, postloader, pluginName, username, fakepass, type:'collector-zip-package'},
-					new URL(<?=json_encode(COLLECTOR_PLAYGROUND_URL)?>).origin,
-					[zipPackage, plugin, preloader, postloader]
-				);
-				loader.remove();
-			};
-
-			window.addEventListener('message', onListen);
-
-			const playgroundUrl = '<?=COLLECTOR_PLAYGROUND_URL;?>?url=/wp-admin/&wp=<?=COLLECTOR_WP_VERSION;?>&php=<?=COLLECTOR_PHP_VERSION;?>';
-
-			frame.setAttribute('src', playgroundUrl);
+			client.isReady().then(() => client.goTo('/wp-admin/plugins.php'));
 		})();
+
+		const goBack = document.getElementById('goBack');
+		const goBackClicked = event => {
+
+			const qsUrl  = new URLSearchParams(window.location.search).get('returnUrl');
+			const drUrl  = new URL(document.referrer).pathname;
+
+			if (qsUrl && qsUrl.substr(0,7) !== 'http://' && qsUrl.substr(0,8) !== 'https://' && qsUrl.substr(0,2) !== '//') {
+				window.location.assign(qsUrl);
+				event.preventDefault();
+			}
+			else if (drUrl && drUrl.substr(0,7) !== 'http://' && drUrl.substr(0,8) !== 'https://' && drUrl.substr(0,2) !== '//') {
+				window.location.assign(drUrl);
+				event.preventDefault();
+			}
+		};
+
+		goBack.addEventListener('click', goBackClicked);
+
     </script>
-    <a href = "<?=COLLECTOR_DOWNLOAD_PATH;?>">Download Zip</a>
-    <style type = "text/css">
+
+	<a href = "<?=COLLECTOR_DOWNLOAD_PATH;?>">Download Zip</a>
+
+	<style type = "text/css">
+		#wp-playground-toolbar {
+			background-color: #eaaa00; font-weight: bold; text-align: center; font-size: 1rem; padding: 0.75em;
+			display: flex; flex-direction: row; align-items: center; justify-content: center;
+			box-shadow: 0 4px 4px rgba(0,0,0,0.25); position: relative; z-index:1999999;
+			animation: collector-fade-in 0.25s 0.65s cubic-bezier(0.175, 0.885, 0.5, 1.85) 1 forwards; transform:translateY(-100%);
+		}
+		#wp-playground-toolbar > a { text-transform: capitalize; font-size: 0.8rem; padding: 0 0.5rem; }
         #wpbody-content, #wpcontent { padding-left: 0px !important; }
         #wpwrap, #wpbody, #wpbody-content {padding-bottom: 0px; height: 100%;}
-        #wpbody-content { position: relative; }
-        #wp-playground, #wp-playground-loader {
-			position: absolute; top: 0; left: 0; width:100%; height:100%; z-index:999; background-color: #FFF;
+		#wpwrap, #wpbody { position: initial; }
+        #wp-playground-main-area { position: relative; display: flex; flex: 1; }
+        #wp-playground, #wp-playground-wrapper {
+			position: absolute; top: 0; left: 0; width:100%; height:100%; z-index:999999; background-color: #FFF;
+			display: flex; flex-direction: column;
 		}
+		@keyframes collector-fade-in { from{transform:translateY(-100%)} to{transform:translateY(0)} }
     </style>
 <?php
 }
 
 function collector_plugin_install_action_links($action_links, $plugin)
 {
-    $preview_button = sprintf(
+	$retUrl = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) . urlencode('?' . http_build_query($_GET));
+
+	$preview_button = sprintf(
         '<a class="preview-now button" data-slug="%s" href="%s" aria-label="%s" data-name="%s">%s</a>',
         esc_attr( $plugin['slug'] ),
-        '/wp-admin/admin.php?page=collector_render_playground_page&pluginUrl=' . esc_url( $plugin['download_link'] ) . '&pluginName=' . esc_attr( $plugin['slug'] ),
+        '/wp-admin/admin.php?page=collector_render_playground_page&pluginUrl=' . esc_url( $plugin['download_link'] ) . '&pluginName=' . esc_attr( $plugin['slug'] ) . '&returnUrl=' . esc_attr( $retUrl ),
         /* translators: %s: Plugin name and version. */
-        esc_attr( sprintf( _x( 'Install %s now', 'plugin' ), $plugin['name'] ) ),
+        esc_attr( sprintf( _x( 'Preview %s now', 'plugin' ), $plugin['name'] ) ),
         esc_attr( $plugin['name'] ),
         __( 'Preview Now' )
     );
@@ -147,3 +258,4 @@ function collector_plugin_install_action_links($action_links, $plugin)
 
     return $action_links;
 }
+

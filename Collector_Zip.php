@@ -1,5 +1,23 @@
 <?php
 
+function collector_zip_wp_content($zip)
+{
+	$callback = function ($realPath, $packPath) use ($zip, &$callback) {
+		if(is_file($realPath))
+		{
+			$zip->addFile($realPath, $packPath);
+		}
+		else if(is_dir($realPath))
+		{
+			$zip->addEmptyDir($packPath);
+
+			collector_iterate_directory($realPath, ABSPATH, $callback);
+		}
+	};
+
+	collector_iterate_directory(ABSPATH . '/' . 'wp-content/', ABSPATH, $callback);
+}
+
 function collector_open_zip()
 {
 	$zipName = collector_get_tmpfile('package', 'zip');
@@ -21,7 +39,7 @@ function collector_close_zip($zip, $files)
 function collector_zip_collect()
 {
 	[$zip, $zipName] = collector_open_zip();
-	collector_dump_wp_content($zip);
+	collector_zip_wp_content($zip);
 	$tmpFiles = collector_dump_db($zip);
 	collector_close_zip($zip, $tmpFiles);
 
