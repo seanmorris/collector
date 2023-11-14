@@ -12,7 +12,6 @@ Version: 0.0.0
 Author URI: https://github.com/seanmorris/
 */
 
-// const COLLECTOR_PLAYGROUND_FLAG = '/tmp/690013d3-b53b-43f2-8371-b293a3bdc4fb';
 const COLLECTOR_DOWNLOAD_PATH   = '/wp-admin/?page=collector_download_package';
 const COLLECTOR_FINAL_ZIP       = '/tmp/collector-package.zip';
 
@@ -31,15 +30,10 @@ require __DIR__ . '/Collector_Db.php';
 require __DIR__ . '/Collector_Helpers.php';
 require __DIR__ . '/Collector_Restore.php';
 require __DIR__ . '/Collector_Zip.php';
-// require __DIR__ . '/Collector_Github.php';
-// require __DIR__ . '/Collector_Settings.php';
 
-// add_action('admin_init', 'collector_settings_init');
 add_action('admin_menu', 'collector_plugin_menu');
 add_action('plugins_loaded', 'collector_plugins_loaded');
 add_filter('plugin_install_action_links', 'collector_plugin_install_action_links', 10, 2);
-
-// register_activation_hook(__FILE__, 'collector_restore_backup');
 
 function collector_plugins_loaded()
 {
@@ -55,12 +49,6 @@ function collector_plugins_loaded()
         collector_zip_delete();
         exit();
     }
-
-	// if(substr(urldecode($_SERVER['REQUEST_URI']), 0, strlen(COLLECTOR_GITHUB_ACCEPT_PATH)) === COLLECTOR_GITHUB_ACCEPT_PATH)
-    // {
-	// 	collector_github_accept();
-	// 	exit();
-	// }
 }
 
 function collector_plugin_menu()
@@ -74,15 +62,6 @@ function collector_plugin_menu()
         'collector_render_playground_page',
         NULL
     );
-
-	// add_submenu_page(
-	// 	'options-general.php',
-	// 	'Collector',
-	// 	'Collector Settings',
-	// 	'manage_options',
-	// 	'collector',
-	// 	'collector_render_settings_page'
-	// );
 }
 
 function collector_render_playground_page()
